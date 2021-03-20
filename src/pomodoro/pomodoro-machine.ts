@@ -133,6 +133,7 @@ export const createPomodoroMachine = ({
         longRestTimerFinished: {
           entry: assign({
             value: DEFAULT_INITIAL_VALUE,
+            // @ts-ignore
             completedCycles: (ctx) => ctx.completedCycles + 1,
           }),
           always: "stopped",
