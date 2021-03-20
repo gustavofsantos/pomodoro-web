@@ -159,10 +159,10 @@ export const createPomodoroMachine = ({
   );
 
 function notify(message) {
-  console.log("call notify");
-
   const doNotification = () => {
-    const notification = new Notification(message);
+    const notification = new Notification("Pomodoro Timer", {
+      body: message,
+    });
   };
 
   if ("Notification" in window) {
