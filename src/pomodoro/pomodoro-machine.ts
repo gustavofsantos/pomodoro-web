@@ -1,14 +1,15 @@
 import { assign, createMachine } from "xstate";
 
-const WORK_TIMER_LIMIT_MIN = 25;
-const SHORT_REST_TIMER_LIMIT_MIN = 5;
-const LONG_REST_TIMER_LIMIT_MIN = 15;
-const DEFAULT_INITIAL_VALUE = 0;
+export const DEFAULT_WORK_TIMER_LIMIT_MIN = 25 * 60;
+export const DEFAULT_SHORT_REST_TIMER_LIMIT_MIN = 5 * 60;
+export const DEFAULT_LONG_REST_TIMER_LIMIT_MIN = 15 * 60;
+export const DEFAULT_INITIAL_VALUE = 0;
 
 type Context = {
   timeMs: number;
   value: number;
   workTimerCount: number;
+  completedCycles: number;
 };
 
 export const createPomodoroMachine = ({
@@ -22,6 +23,7 @@ export const createPomodoroMachine = ({
         timeMs,
         value: initialValue,
         workTimerCount: 0,
+        completedCycles: 0,
       },
       initial: "stopped",
       states: {
@@ -39,11 +41,11 @@ export const createPomodoroMachine = ({
           on: {
             TICK: [
               {
-                cond: (ctx) => ctx.value < WORK_TIMER_LIMIT_MIN * 60,
+                cond: (ctx) => ctx.value < DEFAULT_WORK_TIMER_LIMIT_MIN,
                 actions: assign({ value: (ctx) => ctx.value + 1 }),
               },
               {
-                cond: (ctx) => ctx.value >= WORK_TIMER_LIMIT_MIN * 60,
+                cond: (ctx) => ctx.value >= DEFAULT_WORK_TIMER_LIMIT_MIN,
                 target: "workTimerFinish",
               },
             ],
@@ -82,11 +84,11 @@ export const createPomodoroMachine = ({
           on: {
             TICK: [
               {
-                cond: (ctx) => ctx.value < SHORT_REST_TIMER_LIMIT_MIN * 60,
+                cond: (ctx) => ctx.value < DEFAULT_SHORT_REST_TIMER_LIMIT_MIN,
                 actions: assign({ value: (ctx) => ctx.value + 1 }),
               },
               {
-                cond: (ctx) => ctx.value >= SHORT_REST_TIMER_LIMIT_MIN * 60,
+                cond: (ctx) => ctx.value >= DEFAULT_SHORT_REST_TIMER_LIMIT_MIN,
                 target: "shortRestTimerFinish",
               },
             ],
@@ -110,15 +112,15 @@ export const createPomodoroMachine = ({
           on: {
             TICK: [
               {
-                cond: (ctx) => ctx.value < LONG_REST_TIMER_LIMIT_MIN * 60,
+                cond: (ctx) => ctx.value < DEFAULT_LONG_REST_TIMER_LIMIT_MIN,
                 actions: assign({ value: (ctx) => ctx.value + 1 }),
               },
               {
-                cond: (ctx) => ctx.value >= LONG_REST_TIMER_LIMIT_MIN * 60,
-                target: "workTimer",
+                cond: (ctx) => ctx.value >= DEFAULT_LONG_REST_TIMER_LIMIT_MIN,
+                target: "longRestTimerFinished",
               },
             ],
-            PAUSE: "longRestTimerFinished",
+            PAUSE: "longRestTimerPaused",
             STOP: "stopped",
           },
         },
@@ -129,8 +131,11 @@ export const createPomodoroMachine = ({
           },
         },
         longRestTimerFinished: {
-          entry: assign({ value: DEFAULT_INITIAL_VALUE }),
-          always: "workTimer",
+          entry: assign({
+            value: DEFAULT_INITIAL_VALUE,
+            completedCycles: (ctx) => ctx.completedCycles + 1,
+          }),
+          always: "stopped",
         },
       },
     },
